@@ -1,53 +1,90 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const fileInput = document.getElementById('xmlFile');
-    const fileNameDisplay = document.getElementById('fileName');
+    const fileInput = document.getElementById('fileInput');
+    const fileListDisplay = document.getElementById('fileList');
     const convertBtn = document.getElementById('convertBtn');
     const downloadBtn = document.getElementById('downloadBtn');
+    const xmlPreview = document.getElementById('xmlPreview');
+    const imageContainer = document.getElementById('imageContainer');
     const outputArea = document.getElementById('output');
 
-    let currentFile = null;
-    let convertedContent = '';
+    let currentXmlFile = null;
+    let currentXmlContent = '';
 
     // 监听文件选择
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            currentFile = e.target.files[0];
-            fileNameDisplay.textContent = currentFile.name;
-            convertBtn.disabled = false;
-            downloadBtn.disabled = true;
-            outputArea.value = '';
-        }
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        // 重置状态
+        currentXmlFile = null;
+        currentXmlContent = '';
+        xmlPreview.value = '';
+        imageContainer.innerHTML = '';
+        outputArea.value = '';
+        convertBtn.disabled = true;
+        downloadBtn.disabled = true;
+        
+        // 显示文件列表
+        const fileNames = files.map(f => f.name).join(', ');
+        fileListDisplay.textContent = `已选择: ${fileNames}`;
+
+        // 处理文件
+        files.forEach(file => {
+            if (file.name.toLowerCase().endsWith('.xml')) {
+                handleXmlFile(file);
+            } else if (file.type.startsWith('image/')) {
+                handleImageFile(file);
+            }
+        });
     });
+
+    function handleXmlFile(file) {
+        currentXmlFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentXmlContent = e.target.result;
+            xmlPreview.value = currentXmlContent;
+            convertBtn.disabled = false;
+        };
+        reader.readAsText(file);
+    }
+
+    function handleImageFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.title = file.name;
+            imageContainer.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    }
 
     // 监听转换按钮
     convertBtn.addEventListener('click', () => {
-        if (!currentFile) return;
+        if (!currentXmlContent) return;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const xmlContent = e.target.result;
-                convertedContent = convertXmlToFnt(xmlContent);
-                outputArea.value = convertedContent;
-                downloadBtn.disabled = false;
-            } catch (error) {
-                alert('转换失败: ' + error.message);
-                console.error(error);
-            }
-        };
-        reader.readAsText(currentFile);
+        try {
+            const convertedContent = convertXmlToFnt(currentXmlContent);
+            outputArea.value = convertedContent;
+            downloadBtn.disabled = false;
+        } catch (error) {
+            alert('转换失败: ' + error.message);
+            console.error(error);
+        }
     });
 
     // 监听下载按钮
     downloadBtn.addEventListener('click', () => {
-        if (!convertedContent) return;
+        const content = outputArea.value;
+        if (!content) return;
 
-        const blob = new Blob([convertedContent], { type: 'text/plain' });
+        const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         
         // 保持原文件名，但修改后缀
-        let downloadName = currentFile.name.replace(/\.xml$/i, '') + '.fnt';
+        let downloadName = currentXmlFile ? currentXmlFile.name.replace(/\.xml$/i, '') + '.fnt' : 'font.fnt';
         
         a.href = url;
         a.download = downloadName;
@@ -68,60 +105,61 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('无效的 XML 文件');
         }
 
-        let result = '';
-
-        // 1. info
-        const info = xmlDoc.querySelector('info');
-        if (info) {
-            result += 'info ' + getAttributesAsString(info, ['face', 'charset']) + '\n';
-        }
-
-        // 2. common
-        const common = xmlDoc.querySelector('common');
-        if (common) {
-            result += 'common ' + getAttributesAsString(common) + '\n';
-        }
-
-        // 3. pages
-        const pages = xmlDoc.querySelectorAll('pages page');
-        if (pages.length > 0) {
-            // 某些 XML 格式可能没有 pages 标签包裹，直接是 page 列表，或者在 pages 下
-            // 标准 AngelCode XML 是 <pages><page ... /><page ... /></pages>
-            // 但为了健壮性，我们查找所有 page 元素
-            // 注意：info 和 common 也是单例，但 page 是列表
-            // 实际上 AngelCode XML 结构通常是 root -> pages -> page
+        // 获取原始数据
+        const infoNode = xmlDoc.querySelector('info');
+        const commonNode = xmlDoc.querySelector('common');
+        const charNodes = xmlDoc.querySelectorAll('char');
+        const kerningNodes = xmlDoc.querySelectorAll('kerning');
+        
+        // 提取关键属性
+        // Laya 格式需要 size 和 lineHeight 在 info 节点中
+        const size = infoNode ? (infoNode.getAttribute('size') || '32') : '32';
+        const lineHeight = commonNode ? (commonNode.getAttribute('lineHeight') || '32') : '32';
+        
+        // 构建新的 XML 结构 (Laya 兼容格式)
+        let result = '<?xml version="1.0" encoding="utf-8"?>\n';
+        result += '<font>\n';
+        
+        // info 节点：Laya 格式将 lineHeight 放在这里，并添加 autoScaleSize
+        result += `  <info autoScaleSize="true" size="${size}" lineHeight="${lineHeight}"/>\n`;
+        
+        // chars 节点
+        result += '  <chars>\n';
+        
+        for (let i = 0; i < charNodes.length; i++) {
+            const char = charNodes[i];
+            // 提取需要的属性
+            const id = char.getAttribute('id');
+            const x = char.getAttribute('x');
+            const y = char.getAttribute('y');
+            const width = char.getAttribute('width');
+            const height = char.getAttribute('height');
+            const xoffset = char.getAttribute('xoffset');
+            const yoffset = char.getAttribute('yoffset');
+            const xadvance = char.getAttribute('xadvance');
             
-            // 重新获取 pages 数量，因为 common 标签里通常有 pages 属性表示数量
-            // 这里我们直接遍历找到的 page 元素
-            for (let i = 0; i < pages.length; i++) {
-                result += 'page ' + getAttributesAsString(pages[i], ['file']) + '\n';
+            // 构建 char 标签
+            // 注意：Laya 示例中有 img 属性，但通常用于散图。对于大图字体，通常不需要 img 属性，
+            // 或者引擎会根据同名图片自动处理。这里我们只保留坐标信息。
+            result += `    <char id="${id}" x="${x}" y="${y}" width="${width}" height="${height}" xoffset="${xoffset}" yoffset="${yoffset}" xadvance="${xadvance}"/>\n`;
+        }
+        
+        result += '  </chars>\n';
+
+        // kernings 节点 (如果原文件有，则保留，以防万一)
+        if (kerningNodes.length > 0) {
+            result += '  <kernings>\n';
+            for (let i = 0; i < kerningNodes.length; i++) {
+                const k = kerningNodes[i];
+                const first = k.getAttribute('first');
+                const second = k.getAttribute('second');
+                const amount = k.getAttribute('amount');
+                result += `    <kerning first="${first}" second="${second}" amount="${amount}"/>\n`;
             }
+            result += '  </kernings>\n';
         }
 
-        // 4. chars
-        const charsElement = xmlDoc.querySelector('chars');
-        const chars = xmlDoc.querySelectorAll('chars char');
-        if (charsElement) {
-            // 优先使用 XML 中的 count 属性，如果没有则使用实际数量
-            const count = charsElement.getAttribute('count') || chars.length;
-            result += `chars count=${count}\n`;
-            
-            for (let i = 0; i < chars.length; i++) {
-                result += 'char ' + getAttributesAsString(chars[i]) + '\n';
-            }
-        }
-
-        // 5. kernings
-        const kerningsElement = xmlDoc.querySelector('kernings');
-        const kernings = xmlDoc.querySelectorAll('kernings kerning');
-        if (kerningsElement || kernings.length > 0) {
-            const count = kerningsElement ? (kerningsElement.getAttribute('count') || kernings.length) : kernings.length;
-            result += `kernings count=${count}\n`;
-            
-            for (let i = 0; i < kernings.length; i++) {
-                result += 'kerning ' + getAttributesAsString(kernings[i]) + '\n';
-            }
-        }
+        result += '</font>';
 
         return result;
     }

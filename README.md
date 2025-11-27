@@ -1,18 +1,32 @@
-# XML 转 FNT 工具
+# XML 转 FNT 工具 (Laya 专用版)
 
-这是一个简单的网页工具，用于将 AngelCode BMFont 的 XML 格式字体描述文件转换为文本 (FNT) 格式。
+这是一个简单的网页工具，用于将 AngelCode BMFont 的 XML 格式字体描述文件转换为 **Laya 游戏引擎** 支持的 XML 格式 `.fnt` 文件。
 
 ## 功能
-- 支持选择本地 XML 文件。
+- 支持选择本地 XML 文件和对应的 PNG 图片。
 - 在浏览器中直接解析转换，无需上传服务器。
-- 实时预览转换结果。
-- 一键下载转换后的 `.fnt` 文件。
+- 实时预览源 XML 和图片。
+- 生成符合 Laya 引擎规范的 XML 格式 `.fnt` 文件。
 
 ## 使用方法
 1. 双击打开 `index.html` 文件（推荐使用 Chrome, Edge, Firefox 等现代浏览器）。
-2. 点击 "选择 XML 文件" 按钮，选择你的 `.xml` 字体文件。
-3. 点击 "转换" 按钮。
-4. 预览结果无误后，点击 "下载 .fnt 文件" 保存到本地。
+2. 点击 "选择文件 (XML 和 PNG)" 按钮。
+   - 你可以同时选择 `.xml` 描述文件和对应的 `.png` 图片文件。
+   - 按住 `Ctrl` (Windows) 或 `Command` (Mac) 键进行多选。
+3. 界面将自动显示 XML 内容预览和图片预览。
+4. 点击 "转换" 按钮。
+5. 预览结果无误后，点击 "下载 .fnt 文件" 保存到本地。
+
+## 转换规则
+本工具会将标准的 AngelCode XML 转换为 Laya 特定的 XML 结构：
+- 将 `common` 节点的 `lineHeight` 属性移动到 `info` 节点。
+- 移除 `common` 和 `pages` 节点。
+- 保留 `chars` 和 `char` 节点的核心属性 (`id`, `x`, `y`, `width`, `height`, `xoffset`, `yoffset`, `xadvance`)。
+- 自动添加 `autoScaleSize="true"` 属性。
+
+## 示例文件
+项目中包含一个 `示例文件` 目录，里面有 3 组 XML 和 PNG 文件供测试使用。
+你可以直接使用这些文件来体验工具的功能。
 
 ## 兼容性
 本工具纯前端实现，依赖浏览器内置的 `DOMParser` 和 `FileReader` API。

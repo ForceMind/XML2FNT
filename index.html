@@ -15,11 +15,24 @@
 
         <main>
             <div class="upload-section">
-                <label for="xmlFile" class="file-label">
-                    <span>选择 XML 文件</span>
-                    <input type="file" id="xmlFile" accept=".xml">
+                <label for="fileInput" class="file-label">
+                    <span>选择文件 (XML 和 PNG)</span>
+                    <input type="file" id="fileInput" accept=".xml,.png,.jpg,.jpeg" multiple>
                 </label>
-                <span id="fileName">未选择文件</span>
+                <div id="fileList" class="file-list">未选择文件</div>
+            </div>
+
+            <div class="preview-container">
+                <div class="preview-box source-preview">
+                    <h3>源 XML 预览</h3>
+                    <textarea id="xmlPreview" readonly placeholder="XML 内容将显示在这里..."></textarea>
+                </div>
+                <div class="preview-box image-preview">
+                    <h3>图片预览</h3>
+                    <div id="imageContainer" class="image-container">
+                        <p class="placeholder">图片将显示在这里...</p>
+                    </div>
+                </div>
             </div>
 
             <div class="actions">
@@ -28,8 +41,8 @@
             </div>
 
             <div class="preview-section">
-                <h3>预览 / 结果</h3>
-                <textarea id="output" readonly placeholder="转换后的 FNT 内容将显示在这里..."></textarea>
+                <h3>转换结果预览 (Laya XML FNT)</h3>
+                <textarea id="output" readonly placeholder="转换后的 XML 内容将显示在这里..."></textarea>
             </div>
         </main>
 
