@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML 转 FNT 在线工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>XML 转 FNT 转换器</h1>
+            <p>将 AngelCode XML 字体描述文件转换为文本 (FNT) 格式</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <label for="xmlFile" class="file-label">
+                    <span>选择 XML 文件</span>
+                    <input type="file" id="xmlFile" accept=".xml">
+                </label>
+                <span id="fileName">未选择文件</span>
+            </div>
+
+            <div class="actions">
+                <button id="convertBtn" disabled>转换</button>
+                <button id="downloadBtn" disabled>下载 .fnt 文件</button>
+            </div>
+
+            <div class="preview-section">
+                <h3>预览 / 结果</h3>
+                <textarea id="output" readonly placeholder="转换后的 FNT 内容将显示在这里..."></textarea>
+            </div>
+        </main>
+
+        <footer>
+            <p>纯前端处理，文件不会上传到服务器</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
