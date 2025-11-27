@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentXmlFile = null;
     let currentXmlContent = '';
+    let currentImage = null; // 存储 Image 对象
+    let currentChars = [];   // 存储解析出的字符位置信息
 
     // 监听文件选择
     fileInput.addEventListener('change', (e) => {
@@ -16,35 +18,62 @@ document.addEventListener('DOMContentLoaded', () => {
         if (files.length === 0) return;
 
         // 重置状态
-        currentXmlFile = null;
-        currentXmlContent = '';
-        xmlPreview.value = '';
-        imageContainer.innerHTML = '';
-        outputArea.value = '';
-        convertBtn.disabled = true;
-        downloadBtn.disabled = true;
+        // 注意：如果用户只选了 XML，我们保留之前的图片（如果想支持增量更新的话）
+        // 但为了简单逻辑，这里每次选择都重置相关状态，或者根据文件类型更新
+        // 更好的体验是：增量更新。
         
+        // 这里我们采用增量更新策略：
+        // 如果新选了 XML，更新 XML；如果新选了图片，更新图片。
+        
+        let hasNewXml = false;
+        let hasNewImage = false;
+
+        const xmlFile = files.find(f => f.name.toLowerCase().endsWith('.xml'));
+        const imgFile = files.find(f => f.type.startsWith('image/'));
+
+        if (xmlFile) {
+            currentXmlFile = xmlFile;
+            hasNewXml = true;
+            // 重置 XML 相关
+            currentXmlContent = '';
+            currentChars = [];
+            xmlPreview.value = '正在加载 XML...';
+            convertBtn.disabled = true;
+        }
+
+        if (imgFile) {
+            hasNewImage = true;
+            // 重置图片相关
+            currentImage = null;
+            imageContainer.innerHTML = '<p class="placeholder">正在加载图片...</p>';
+        }
+
         // 显示文件列表
-        const fileNames = files.map(f => f.name).join(', ');
-        fileListDisplay.textContent = `已选择: ${fileNames}`;
+        const fileNames = [];
+        if (currentXmlFile) fileNames.push(currentXmlFile.name);
+        if (imgFile) fileNames.push(imgFile.name); // 这里只显示新选的图片名，或者应该显示当前所有已加载的文件名
+        // 简单起见，显示当前操作的文件名
+        fileListDisplay.textContent = `当前加载: ${files.map(f => f.name).join(', ')}`;
 
         // 处理文件
-        files.forEach(file => {
-            if (file.name.toLowerCase().endsWith('.xml')) {
-                handleXmlFile(file);
-            } else if (file.type.startsWith('image/')) {
-                handleImageFile(file);
-            }
-        });
+        if (xmlFile) handleXmlFile(xmlFile);
+        if (imgFile) handleImageFile(imgFile);
     });
 
     function handleXmlFile(file) {
-        currentXmlFile = file;
         const reader = new FileReader();
         reader.onload = (e) => {
             currentXmlContent = e.target.result;
             xmlPreview.value = currentXmlContent;
             convertBtn.disabled = false;
+            
+            // 解析 XML 获取字符信息用于预览
+            try {
+                currentChars = parseXmlChars(currentXmlContent);
+                updateImagePreview(); // XML 更新了，重绘图片上的框
+            } catch (err) {
+                console.error("XML 解析预览信息失败", err);
+            }
         };
         reader.readAsText(file);
     }
@@ -52,12 +81,69 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleImageFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            const img = document.createElement('img');
+            const img = new Image();
+            img.onload = () => {
+                currentImage = img;
+                updateImagePreview();
+            };
             img.src = e.target.result;
-            img.title = file.name;
-            imageContainer.appendChild(img);
         };
         reader.readAsDataURL(file);
+    }
+
+    function updateImagePreview() {
+        imageContainer.innerHTML = '';
+        if (!currentImage) {
+            imageContainer.innerHTML = '<p class="placeholder">图片将显示在这里...</p>';
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = currentImage.width;
+        canvas.height = currentImage.height;
+        const ctx = canvas.getContext('2d');
+
+        // 1. 绘制原图
+        ctx.drawImage(currentImage, 0, 0);
+
+        // 2. 如果有字符信息，绘制红框
+        if (currentChars && currentChars.length > 0) {
+            ctx.strokeStyle = '#ff0000'; // 红色边框
+            ctx.lineWidth = 1;
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // 半透明红色填充
+
+            currentChars.forEach(char => {
+                // 绘制矩形
+                ctx.strokeRect(char.x, char.y, char.width, char.height);
+                ctx.fillRect(char.x, char.y, char.width, char.height);
+                
+                // 可选：绘制 ID 或字符
+                // ctx.fillStyle = 'white';
+                // ctx.font = '10px Arial';
+                // ctx.fillText(char.id, char.x + 2, char.y + 10);
+                // ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // 恢复填充色
+            });
+        }
+
+        imageContainer.appendChild(canvas);
+    }
+
+    function parseXmlChars(xmlString) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const charNodes = xmlDoc.querySelectorAll('char');
+        const chars = [];
+        for (let i = 0; i < charNodes.length; i++) {
+            const node = charNodes[i];
+            chars.push({
+                id: node.getAttribute('id'),
+                x: parseInt(node.getAttribute('x') || 0),
+                y: parseInt(node.getAttribute('y') || 0),
+                width: parseInt(node.getAttribute('width') || 0),
+                height: parseInt(node.getAttribute('height') || 0)
+            });
+        }
+        return chars;
     }
 
     // 监听转换按钮

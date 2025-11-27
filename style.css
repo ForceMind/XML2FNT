@@ -97,30 +97,25 @@ p {
 }
 
 .image-container {
-    height: 250px;
-    overflow: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
+    height: 400px; /* 增加高度以便更好地预览 */
+    overflow: auto; /* 允许滚动 */
+    display: block; /* 改为 block 以便 canvas 正常显示 */
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 10px;
+    padding: 0; /* 移除 padding 以便 canvas 贴边 */
+    position: relative;
 }
 
-.image-container img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    border: 1px solid #eee;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+.image-container canvas {
+    display: block;
+    /* 移除 max-width 限制，保持原始比例，允许滚动查看细节 */
+    /* 如果图片过大，用户可以通过滚动条查看 */
 }
 
-.placeholder {
-    color: #999;
-    font-style: italic;
+.image-container .placeholder {
+    padding: 20px;
+    text-align: center;
 }
 
 .preview-section textarea {
