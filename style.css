@@ -69,6 +69,7 @@ p {
 
 .preview-box {
     flex: 1;
+    min-width: 0; /* 防止 flex item 被内容撑大 */
     background: #f9f9f9;
     padding: 15px;
     border-radius: var(--border-radius);
@@ -97,25 +98,127 @@ p {
 }
 
 .image-container {
-    height: 400px; /* 增加高度以便更好地预览 */
-    overflow: auto; /* 允许滚动 */
-    display: block; /* 改为 block 以便 canvas 正常显示 */
+    height: 250px;
+    overflow: hidden; /* 小预览窗不需要滚动 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 0; /* 移除 padding 以便 canvas 贴边 */
+    padding: 10px;
+    cursor: zoom-in; /* 提示可点击放大 */
     position: relative;
 }
 
 .image-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     display: block;
-    /* 移除 max-width 限制，保持原始比例，允许滚动查看细节 */
-    /* 如果图片过大，用户可以通过滚动条查看 */
 }
 
 .image-container .placeholder {
     padding: 20px;
     text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: hidden; 
+    background-color: rgba(0,0,0,0.9); 
+}
+
+.modal-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+#modalCanvas {
+    transform-origin: center center;
+    cursor: grab;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#modalCanvas:active {
+    cursor: grabbing;
+}
+
+.close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    z-index: 1002;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-controls {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1002;
+    display: flex;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 30px;
+}
+
+.modal-controls button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.modal-controls button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+#resetBtn {
+    width: auto;
+    padding: 0 15px;
+    border-radius: 20px;
+    font-size: 14px;
 }
 
 .preview-section textarea {

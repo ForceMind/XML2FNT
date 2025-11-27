@@ -6,11 +6,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const xmlPreview = document.getElementById('xmlPreview');
     const imageContainer = document.getElementById('imageContainer');
     const outputArea = document.getElementById('output');
+    
+    // 模态框相关元素
+    const modal = document.getElementById('imageModal');
+    const modalCanvas = document.getElementById('modalCanvas');
+    const closeBtn = document.querySelector('.close');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
     let currentXmlFile = null;
     let currentXmlContent = '';
     let currentImage = null; // 存储 Image 对象
     let currentChars = [];   // 存储解析出的字符位置信息
+    
+    // 模态框状态
+    let modalState = {
+        scale: 1,
+        panning: false,
+        pointX: 0,
+        pointY: 0,
+        startX: 0,
+        startY: 0
+    };
 
     // 监听文件选择
     fileInput.addEventListener('change', (e) => {
@@ -116,17 +134,121 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 绘制矩形
                 ctx.strokeRect(char.x, char.y, char.width, char.height);
                 ctx.fillRect(char.x, char.y, char.width, char.height);
-                
-                // 可选：绘制 ID 或字符
-                // ctx.fillStyle = 'white';
-                // ctx.font = '10px Arial';
-                // ctx.fillText(char.id, char.x + 2, char.y + 10);
-                // ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // 恢复填充色
             });
         }
 
+        // 点击打开模态框
+        canvas.addEventListener('click', () => {
+            openModal(canvas);
+        });
+
         imageContainer.appendChild(canvas);
     }
+
+    // 模态框逻辑
+    function openModal(sourceCanvas) {
+        modal.style.display = 'block';
+        
+        // 设置模态框 Canvas 尺寸与源 Canvas 一致
+        modalCanvas.width = sourceCanvas.width;
+        modalCanvas.height = sourceCanvas.height;
+        
+        // 绘制内容
+        const ctx = modalCanvas.getContext('2d');
+        ctx.drawImage(sourceCanvas, 0, 0);
+        
+        // 重置变换状态
+        resetModalTransform();
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    function resetModalTransform() {
+        modalState = {
+            scale: 1,
+            panning: false,
+            pointX: 0,
+            pointY: 0,
+            startX: 0,
+            startY: 0
+        };
+        
+        // 初始适应屏幕
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const imgWidth = modalCanvas.width;
+        const imgHeight = modalCanvas.height;
+        
+        // 计算初始缩放比例，使图片完整显示在屏幕内
+        const scaleX = (containerWidth * 0.9) / imgWidth;
+        const scaleY = (containerHeight * 0.9) / imgHeight;
+        const startScale = Math.min(scaleX, scaleY, 1); // 最多 1 倍，防止小图被拉大
+        
+        modalState.scale = startScale;
+        updateModalTransform();
+    }
+
+    function updateModalTransform() {
+        modalCanvas.style.transform = `translate(${modalState.pointX}px, ${modalState.pointY}px) scale(${modalState.scale})`;
+    }
+
+    // 模态框事件监听
+    closeBtn.addEventListener('click', closeModal);
+    
+    // 点击模态框背景关闭（排除内容区域）
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.classList.contains('modal-content')) {
+            closeModal();
+        }
+    });
+
+    // 缩放控制
+    zoomInBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modalState.scale *= 1.2;
+        updateModalTransform();
+    });
+
+    zoomOutBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modalState.scale /= 1.2;
+        updateModalTransform();
+    });
+
+    resetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetModalTransform();
+    });
+
+    // 鼠标滚轮缩放
+    modalCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        modalState.scale *= delta;
+        updateModalTransform();
+    });
+
+    // 拖拽逻辑
+    modalCanvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        modalState.panning = true;
+        modalState.startX = e.clientX - modalState.pointX;
+        modalState.startY = e.clientY - modalState.pointY;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!modalState.panning) return;
+        e.preventDefault();
+        modalState.pointX = e.clientX - modalState.startX;
+        modalState.pointY = e.clientY - modalState.startY;
+        updateModalTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+        modalState.panning = false;
+    });
 
     function parseXmlChars(xmlString) {
         const parser = new DOMParser();

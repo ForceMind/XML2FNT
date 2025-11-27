@@ -50,6 +50,20 @@
             <p>纯前端处理，文件不会上传到服务器</p>
         </footer>
     </div>
+
+    <!-- 图片查看弹窗 -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <div class="modal-content">
+            <canvas id="modalCanvas"></canvas>
+        </div>
+        <div class="modal-controls">
+            <button id="zoomInBtn">+</button>
+            <button id="zoomOutBtn">-</button>
+            <button id="resetBtn">重置</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
